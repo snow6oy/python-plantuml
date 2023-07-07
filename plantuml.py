@@ -94,10 +94,10 @@ class PlantUML(object):
                     
     """
 
-    def __init__(self, url, basic_auth={}, form_auth={},
+    def __init__(self, url, filetype, basic_auth={}, form_auth={},
                  http_opts={}, request_opts={}):
         self.HttpLib2Error = httplib2.HttpLib2Error
-        self.url = url
+        self.url = f"{url}{filetype}/" if filetype else f"{url}img/"
         self.request_opts = request_opts
         self.auth_type = 'basic_auth' if basic_auth else (
             'form_auth' if form_auth else None)
@@ -173,7 +173,7 @@ class PlantUML(object):
             raise PlantUMLHTTPError(response, content)
         return content
 
-    def processes_file(self, filename, outfile=None, errorfile=None, directory=''):
+    def processes_file(self, filename, filetype, outfile=None, errorfile=None, directory=''):
         """Take a filename of a file containing plantuml text and processes
         it into a .png image.
         
@@ -188,8 +188,10 @@ class PlantUML(object):
         :returns: ``True`` if the image write succedded, ``False`` if there was
                     an error written to ``errorfile``.
         """
-        if outfile is None:
+        if filetype == 'img':
             outfile = path.splitext(filename)[0] + '.png'
+        else: 
+            outfile = path.splitext(filename)[0] + '.' + filetype
         if errorfile is None:
             errorfile = path.splitext(filename)[0] + '_error.html'
         if directory and not path.exists(directory):
@@ -214,16 +216,18 @@ def _build_parser():
                         help='file(s) to generate images from')
     parser.add_argument('-o', '--out', default='',
                         help='directory to put the files into')
-    parser.add_argument('-s', '--server', default='http://www.plantuml.com/plantuml/img/',
+    parser.add_argument('-s', '--server', default='http://www.plantuml.com/plantuml/',
                         help='server to generate from, defaults to "http://www.plantuml.com/plantuml/img/"')
+    parser.add_argument('-f', '--filetype', default='img', choices=['png', 'svg'],
+                        help='type of file to generate, defaults to png')
     return parser
 
 
 def main():
     args = _build_parser().parse_args()
-    pl = PlantUML(args.server)
+    pl = PlantUML(args.server, filetype=args.filetype)
     print(list(map(lambda filename: {'filename': filename,
-                                'gen_success': pl.processes_file(filename, directory=args.out)}, args.files)))
+                                'gen_success': pl.processes_file(filename, filetype=args.filetype, directory=args.out)}, args.files)))
 
 
 if __name__ == '__main__':
